@@ -1,0 +1,5 @@
+outs:
+- md5: df71a2a1ac24550781e2612fe9024e90
+  size: 713689827
+  hash: md5
+  path: svd_model.joblib
