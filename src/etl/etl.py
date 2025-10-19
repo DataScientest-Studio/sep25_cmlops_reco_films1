@@ -146,7 +146,7 @@ if __name__ == "__main__":
     conn.execute("PRAGMA foreign_keys = ON;")
     conn.execute("PRAGMA foreign_key_check;")
     print("Foreign key check passed.")
-    conn.execute("PRAGMA journal_mode = WAL;")
+    conn.execute("PRAGMA journal_mode = DELETE;")
     conn.execute("PRAGMA synchronous = NORMAL;")
     conn.execute("PRAGMA temp_store = DEFAULT;")
     conn.execute("PRAGMA locking_mode = NORMAL;")
