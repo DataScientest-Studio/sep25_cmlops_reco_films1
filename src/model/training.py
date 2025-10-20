@@ -28,6 +28,13 @@ def train_svd_model(n_factors=100, n_epochs=20):
     total_time = time.time() - start_time
     print(f"Training SVD model in {total_time} seconds.")
 
+    # On sauvegarde le trainset pour une utilisation ultérieure
+    start_time = time.time()   
+    trainset_path = "models/trainset.joblib"
+    joblib.dump(trainset, trainset_path)
+    total_time = time.time() - start_time
+    print(f"Saving trainset in {total_time} seconds.")
+
     # On sauvegarde le modèle entraîné
     start_time = time.time()
     joblib.dump(svd, "models/svd_model.joblib")

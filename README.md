@@ -5,3 +5,7 @@
 # 2/ Tracking des données avec DVC (données raw et DB)
 # 3/ Création des scripts d'entrainement et de prediction 
 # 4/ Création des endpoints training et predict 
+
+Pour tester l'api: 
+source .venv/bin/activate
+uvicorn api.api:api --reload --app-dir src
