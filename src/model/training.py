@@ -6,7 +6,7 @@ from surprise.model_selection import cross_validate
 import time
 import joblib
 
-def train_svd_model():
+def train_svd_model(n_factors=100, n_epochs=20):
     # On charge les données de notation depuis la base de données
     conn = sqlite3.connect("data/database.sqlite")
     query = "SELECT user_id, movie_id, rating FROM Ratings"
@@ -25,12 +25,18 @@ def train_svd_model():
     start_time = time.time()    
     trainset = df_surprise.build_full_trainset()
     svd.fit(trainset)
-    print(f"Training SVD model in {time.time() - start_time} seconds.")
+    total_time = time.time() - start_time
+    print(f"Training SVD model in {total_time} seconds.")
 
     # On sauvegarde le modèle entraîné
+    start_time = time.time()
     joblib.dump(svd, "models/svd_model.joblib")
+    total_time_save = time.time() - start_time
+    print(f"Saving SVD model in {total_time_save} seconds.")
+
+    return total_time, total_time_save
 
 if __name__ == "__main__":
-    train_svd_model()
+    train_svd_model(100, 20)
 
 
