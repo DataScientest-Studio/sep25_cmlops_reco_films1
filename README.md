@@ -1,11 +1,47 @@
 # sep25_cmlops_reco_films1
 
-# 0/ Creation d'un virtual env sur python
-# 1/ Construction des tables SQL à partir des CSV du projet et des CSV d'IMDB
-# 2/ Tracking des données avec DVC (données raw et DB)
-# 3/ Création des scripts d'entrainement et de prediction 
-# 4/ Création des endpoints training et predict 
+# Etape pour lancer l'API
 
-Pour tester l'api: 
+## 0/ Téléchargement des données et les placer dans data/raw
+https://grouplens.org/datasets/movielens/20m/
+https://datasets.imdbws.com/
+
+L'architecture des fichiers sera la suivante: 
+data
+    raw
+        imdb
+            name.basics.tsv
+            title.akas.tsv
+            title.basics.tsv
+            title.crew.tsv
+            title.episode.tsv
+            title.principals.tsv
+            title.ratings.tsv
+        ml-20m
+            genome-scores.csv
+            genome-tags.csv
+            links.csv
+            movies.csv
+            ratings.csv
+            tags.csv
+
+## 1/ Creation d'un virtual env sur python
+python3 -m venv .venv
 source .venv/bin/activate
-uvicorn api.api:api --reload --app-dir src
+
+## 2/ Installation des dépendances 
+pip install -r requirements.txt
+
+## 3/ Création de la base de données 
+python ./src/etl/etl.py
+
+## 4/ Lancement de l'entrainement pour avoir un premier modèle 
+python ./src/model/training.py
+
+## 5/ Lancement de l'API 
+uvicorn api.api:api --app-dir src --host 0.0.0.0 --port 8000
+
+## 6/ Test de l'API
+Sur un navigateur: http://localhost:8000/docs
+
+
