@@ -33,6 +33,8 @@ source .venv/bin/activate
 pip install -r requirements.txt
 
 ## 3/ Création de la base de données 
+## Prerequis : installation MySQL server avec parametre local_infile = 1 dans /etc/mysql/mysql.conf.d/mysqld.cnf
+## création d'un fichier config.yaml basé sur config.example.yaml pour saisir les identifiants de connexion
 python ./src/etl/etl.py
 
 ## 4/ Lancement de l'entrainement pour avoir un premier modèle 

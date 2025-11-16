@@ -1,48 +1,82 @@
-import sqlite3
 import pandas as pd
-import os
 from pathlib import Path
 import time
+import MySQLdb
+from sqlalchemy import create_engine, text
+import yaml
 
+# Fonction pour sauvegarder un df dans un csv puis charger ce csv dans une table MySQL pour optimiser la vitesse d'insertion
+def save_df_to_mysql(df, table_name, engine, columns):
+    print(f"Saving DataFrame to table {table_name}...")
+    start_time = time.time()
+    temp_csv_path = str(Path(f"{table_name}.csv").resolve())
+    df.to_csv(temp_csv_path, index=False, header=False)
+    column_clause = f"({', '.join(columns)})" 
+    load_statement = text(
+        "LOAD DATA LOCAL INFILE '"
+        f"{temp_csv_path}"
+        "' INTO TABLE "
+        f"{table_name} FIELDS TERMINATED BY ',' ENCLOSED BY '\"' "
+        "LINES TERMINATED BY '\n' IGNORE 0 LINES "
+        f"{column_clause};"
+    )
+
+    with engine.begin() as connection:
+        connection.execute(load_statement)
+    Path(temp_csv_path).unlink()
+    print(f"Saved DataFrame to table {table_name} in {time.time() - start_time} seconds.")
 
 if __name__ == "__main__":
 
     start_time = time.time()
 
-    # On supprime le fichier de base de données s'il existe déjà
-    db_path = Path("data/database.sqlite")
-    if db_path.exists():
-        os.remove(db_path)
-
-    # On se connecte à la base de données SQLite
-    conn = sqlite3.connect("data/database.sqlite")
-
+    # Connexion à la base de données MySQL
+    cfg = yaml.safe_load(Path("config.yaml").read_text())['mysql']
+    conn = MySQLdb.connect(
+    host=cfg['host'],
+    user=cfg['user'],
+    passwd=cfg['password'],
+    port=cfg['port'],
+    db=cfg['database'],
+    charset="utf8mb4"
+    )
+    
     # On exécute le script SQL pour créer les tables nécessaires 
-    with open("src/etl/create_tables.sql", "r") as f:
-        sql_script = f.read()
-    conn.executescript(sql_script)
+    start_time = time.time()
+    with open("src/etl/create_tables.sql", encoding="utf-8") as f:
+        statements = [stmt.strip() for stmt in f.read().split(";") if stmt.strip()]
 
+    cursor = conn.cursor()
+    for stmt in statements:
+        cursor.execute(stmt)
+
+    conn.commit()
+    cursor.close()
+    conn.close()
     print(f"Creating tables in {time.time() - start_time} seconds.")
-    # On désactive les foreign keys pour l'insertion des données et on optimise la vitesse d'insertion
-    conn.execute("PRAGMA foreign_keys = OFF;")
-    conn.execute("PRAGMA journal_mode = OFF;")
-    conn.execute("PRAGMA synchronous = OFF;")
-    conn.execute("PRAGMA temp_store = MEMORY;")
-    conn.execute("PRAGMA locking_mode = EXCLUSIVE;")
-    conn.execute("PRAGMA cache_size = -10000000;")  # augmenter la taille du cache à 10 Go
 
     # On lit les fichiers CSV dans le dossier data/raw et on les insère dans la base de données
-
-    
     # on merge les fichiers movies.csv et links.csv pour ajouter la colonne imdbId dans la table Movies 
+
+    # Création de l'engine SQLAlchemy pour l'insertion avec pandas
+    engine = create_engine(
+        f"mysql+pymysql://{cfg['user']}:{cfg['password']}@{cfg['host']}:{cfg.get('port',{cfg['port']})}/{cfg['database']}?local_infile=1",
+        connect_args={"charset": "utf8mb4"},
+    )
+    # On déactive les foreign key checks pour éviter les problèmes d'insertion
+    with engine.connect() as connection:
+        connection.execute(text("SET FOREIGN_KEY_CHECKS=0;"))
+
         # Movies(id, title, genres, imdb_id)
     start_time = time.time()
+
     df = pd.read_csv("data/raw/ml-20m/movies.csv", sep=',')
     df_2 = pd.read_csv("data/raw/ml-20m/links.csv", sep=',', dtype={"imdbId": str})
-    df_2['imdbId'] = df_2['imdbId'].apply(lambda x: 'tt' + x)
+    df_2['imdbId'] = df_2['imdbId'].apply(lambda x: 'tt' + x if pd.notna(x) else x)
     df_merge = df.merge(df_2[['movieId', 'imdbId']], how='left', on='movieId')
     df_merge = df_merge.rename(columns={"movieId": "id", "imdbId": "imdb_id"})
-    df_merge.to_sql("Movies", conn, if_exists='append', index=False)
+    columns = ['id', 'title', 'genres', 'imdb_id']
+    save_df_to_mysql(df_merge[columns], "Movies", engine, columns)
     print(f"Inserting Movies in {time.time() - start_time} seconds.")
 
         # Ratings(id, user_id, movie_id, rating, timestamp)
@@ -51,7 +85,10 @@ if __name__ == "__main__":
     df_ratings = df_ratings.rename(columns={"userId": "user_id", "movieId": "movie_id"})
     # on convertit la colonne timestamp (seconds since epoch) en datetime
     df_ratings['timestamp'] = pd.to_datetime(df_ratings['timestamp'], unit='s')
-    df_ratings.to_sql("Ratings", conn, if_exists='append', index=False)
+    df_ratings = df_ratings.reset_index(drop=True)
+    df_ratings['id'] = df_ratings.index + 1
+    columns = ['id', 'user_id', 'movie_id', 'rating', 'timestamp']
+    save_df_to_mysql(df_ratings[columns], "Ratings", engine, columns)
     print(f"Inserting Ratings in {time.time() - start_time} seconds.")
 
         # Tags(id, user_id, movie_id, tag, timestamp)
@@ -60,7 +97,10 @@ if __name__ == "__main__":
     df_tags = df_tags.rename(columns={"userId": "user_id", "movieId": "movie_id"})
     # on convertit la colonne timestamp (seconds since epoch) en datetime
     df_tags['timestamp'] = pd.to_datetime(df_tags['timestamp'], unit='s')
-    df_tags.to_sql("Tags", conn, if_exists='append', index=False)  
+    df_tags = df_tags.reset_index(drop=True)
+    df_tags['id'] = df_tags.index + 1
+    columns = ['id', 'user_id', 'movie_id', 'tag', 'timestamp']
+    save_df_to_mysql(df_tags[columns], "Tags", engine, columns)
     print(f"Inserting Tags in {time.time() - start_time} seconds.")
 
         # GenomeScores(tag_id, movie_id, relevance)
@@ -70,7 +110,10 @@ if __name__ == "__main__":
     df_merge_genome = df_genome_scores.merge(df_genome_tags, how='left', on='tagId')
     df_merge_genome = df_merge_genome.rename(columns={"movieId": "movie_id"})
     df_merge_genome = df_merge_genome.drop(columns=['tagId'])
-    df_merge_genome.to_sql("GenomeScores", conn, if_exists='append', index=False)
+    df_merge_genome = df_merge_genome.reset_index(drop=True)
+    df_merge_genome['id'] = df_merge_genome.index + 1
+    columns = ['id', 'movie_id', 'tag', 'relevance']
+    save_df_to_mysql(df_merge_genome[columns], "GenomeScores", engine, columns)
     print(f"Inserting GenomeScores in {time.time() - start_time} seconds.")
 
             #  IMDBTitleBasics(id, title_id, title_type, primary_title, original_title, is_adult, start_year, end_year, runtime_minutes, genres)
@@ -84,7 +127,8 @@ if __name__ == "__main__":
     # On ne garde que les ids présents dans notre dataset Movies
     movies_df_unique = df_merge['imdb_id'].unique()
     df_imdb_basics = df_imdb_basics[df_imdb_basics['id'].isin(movies_df_unique)]
-    df_imdb_basics.to_sql("IMDBTitleBasics", conn, if_exists='append', index=False)
+    columns = ['id', 'title_type', 'primary_title', 'original_title', 'is_adult', 'start_year', 'end_year', 'runtime_minutes', 'genres']
+    save_df_to_mysql(df_imdb_basics[columns], "IMDBTitleBasics", engine, columns)
     print(f"Inserting IMDBTitleBasics in {time.time() - start_time} seconds.")
 
             # IMDBTitlePrincipals(id, title_id, name_id, category, job, characters)
@@ -96,7 +140,10 @@ if __name__ == "__main__":
     df_imdb_principals = df_imdb_principals.drop_duplicates()
     # On ne garde que les ids présents dans notre dataset Movies
     df_imdb_principals = df_imdb_principals[df_imdb_principals['title_id'].isin(movies_df_unique)]
-    df_imdb_principals.to_sql("IMDBTitlePrincipals", conn, if_exists='append', index=False)
+    df_imdb_principals = df_imdb_principals.reset_index(drop=True)
+    df_imdb_principals['id'] = df_imdb_principals.index + 1
+    columns = ['id', 'title_id', 'name_id', 'category', 'job']
+    save_df_to_mysql(df_imdb_principals[columns], "IMDBTitlePrincipals", engine, columns)
     print(f"Inserting IMDBTitlePrincipals in {time.time() - start_time} seconds.")
     
 
@@ -115,7 +162,8 @@ if __name__ == "__main__":
     df_imdb_crew = df_imdb_crew.drop_duplicates()
     # On ne garde que les ids présents dans notre dataset Movies
     df_imdb_crew = df_imdb_crew[df_imdb_crew['title_id'].isin(movies_df_unique)]
-    df_imdb_crew.to_sql("IMDBTitleCrew", conn, if_exists='append', index=False)
+    columns = ['title_id', 'director', 'writer']
+    save_df_to_mysql(df_imdb_crew[columns], "IMDBTitleCrew", engine, columns)
     print(f"Inserting IMDBTitleCrew in {time.time() - start_time} seconds.")
 
          # IMDBNameBasics(id, primary_name, birth_year, death_year, primary_profession, known_for_titles)
@@ -130,7 +178,8 @@ if __name__ == "__main__":
     name_ids_in_crew_writers = df_imdb_crew['writer'].dropna().unique()
     name_ids_in_principals = set(name_ids_in_principals).union(set(name_ids_in_crew_directors)).union(set(name_ids_in_crew_writers))
     df_imdb_name_basics = df_imdb_name_basics[df_imdb_name_basics['id'].isin(name_ids_in_principals)]
-    df_imdb_name_basics.to_sql("IMDBNameBasics", conn, if_exists='append', index=False)
+    columns = ['id', 'primary_name', 'birth_year', 'death_year', 'primary_profession', 'known_for_titles']
+    save_df_to_mysql(df_imdb_name_basics[columns], "IMDBNameBasics", engine, columns)
     print(f"Inserting IMDBNameBasics in {time.time() - start_time} seconds.")
 
         # IMDBTitleRatings(id, title_id, rating, votes)
@@ -139,16 +188,10 @@ if __name__ == "__main__":
     df_imdb_ratings = df_imdb_ratings.rename(columns={"tconst": "title_id", "averageRating": "rating", "numVotes": "votes"})
     # On ne garde que les ids présents dans notre dataset Movies
     df_imdb_ratings = df_imdb_ratings[df_imdb_ratings['title_id'].isin(movies_df_unique)]
-    df_imdb_ratings.to_sql("IMDBTitleRatings", conn, if_exists='append', index=False)
+    columns = ['title_id', 'rating', 'votes']
+    save_df_to_mysql(df_imdb_ratings[columns], "IMDBTitleRatings", engine, columns)
     print(f"Inserting IMDBTitleRatings in {time.time() - start_time} seconds.")
 
-    # On réactive les foreign keys et on remet les paramètres de la base de données en mode normal
-    conn.execute("PRAGMA foreign_keys = ON;")
-    conn.execute("PRAGMA foreign_key_check;")
-    print("Foreign key check passed.")
-    conn.execute("PRAGMA journal_mode = DELETE;")
-    conn.execute("PRAGMA synchronous = NORMAL;")
-    conn.execute("PRAGMA temp_store = DEFAULT;")
-    conn.execute("PRAGMA locking_mode = NORMAL;")
-
-    conn.close()
+    # On réactive les foreign key checks
+    with engine.connect() as connection:
+        connection.execute(text("SET FOREIGN_KEY_CHECKS=1;"))

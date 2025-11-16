@@ -1,17 +1,16 @@
 import pandas as pd
-import sqlite3
 from sklearn.kernel_approximation import svd
 from surprise import Dataset, Reader, SVD
 from surprise.model_selection import cross_validate
 import time
 import joblib
+import yaml
 
 def train_svd_model(n_factors=100, n_epochs=20):
-    # On charge les données de notation depuis la base de données
-    conn = sqlite3.connect("data/database.sqlite")
-    query = "SELECT user_id, movie_id, rating FROM Ratings"
-    ratings_df = pd.read_sql_query(query, conn)
-    conn.close()
+    # On charge les données de notation depuis la base de données MySQL dans un DataFrame pandas
+    start_time = time.time()
+    cfg = yaml.safe_load(open("config.yaml"))['mysql']
+    ratings_df = pd.read_sql("SELECT user_id, movie_id, rating FROM Ratings", con=f"mysql+pymysql://{cfg['user']}:{cfg['password']}@{cfg['host']}:{cfg.get('port',{cfg['port']})}/{cfg['database']}")    
 
     print("Number of users: ", ratings_df['user_id'].nunique())
     print("Number of movies: ", ratings_df['movie_id'].nunique())

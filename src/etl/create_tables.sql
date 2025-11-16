@@ -1,6 +1,8 @@
 -- Création de la table IMDBTitleBasics
+SET FOREIGN_KEY_CHECKS = 0;
+DROP TABLE IF EXISTS IMDBTitleBasics;
 CREATE TABLE IMDBTitleBasics (
-    id TEXT PRIMARY KEY,
+    id VARCHAR(100) PRIMARY KEY,
     title_type TEXT,
     primary_title TEXT,
     original_title TEXT,
@@ -11,71 +13,92 @@ CREATE TABLE IMDBTitleBasics (
     genres TEXT
 );
 
+-- Création de la table IMDBTitleCrew
+DROP TABLE IF EXISTS IMDBTitleCrew;
+CREATE TABLE IMDBTitleCrew (
+    id VARCHAR(100) PRIMARY KEY,
+    title_id VARCHAR(100),
+    director VARCHAR(100),
+    writer VARCHAR(100),
+    FOREIGN KEY (title_id) REFERENCES IMDBTitleBasics(id),
+    FOREIGN KEY (director) REFERENCES IMDBNameBasics(id),
+    FOREIGN KEY (writer) REFERENCES IMDBNameBasics(id)
+);
+
+
 -- Création de la table IMDBNameBasics
+DROP TABLE IF EXISTS IMDBNameBasics;
 CREATE TABLE IMDBNameBasics (
-    id TEXT PRIMARY KEY,
+    id VARCHAR(100) PRIMARY KEY,
     primary_name TEXT,
     birth_year INTEGER,
     death_year INTEGER,
     primary_profession TEXT,
-    known_for_titles TEXT, 
+    known_for_titles VARCHAR(100), 
     FOREIGN KEY (known_for_titles) REFERENCES IMDBTitleBasics(id)
 );
 
 -- Création de la table IMDBTitlePrincipals
+DROP TABLE IF EXISTS IMDBTitlePrincipals;
 CREATE TABLE IMDBTitlePrincipals (
-    title_id TEXT NOT NULL,
-    name_id TEXT,
-    category TEXT,
+    id INTEGER PRIMARY KEY AUTO_INCREMENT,
+    title_id VARCHAR(100) NOT NULL,
+    name_id VARCHAR(100) NOT NULL,
+    category TEXT NOT NULL,
     job TEXT,
-    PRIMARY KEY (title_id, name_id, category),
     FOREIGN KEY (title_id) REFERENCES IMDBTitleBasics(id),
     FOREIGN KEY (name_id) REFERENCES IMDBNameBasics(id)
 );
 
 -- Création de la table IMDBTitleRatings
+DROP TABLE IF EXISTS IMDBTitleRatings;
 CREATE TABLE IMDBTitleRatings (
-    title_id TEXT NOT NULL,
+    title_id VARCHAR(100) PRIMARY KEY,
     rating FLOAT,
     votes INTEGER,
-    PRIMARY KEY (title_id),
     FOREIGN KEY (title_id) REFERENCES IMDBTitleBasics(id)
 );
 
 -- Création de la table Movies
+DROP TABLE IF EXISTS Movies;
 CREATE TABLE Movies (
     id INTEGER PRIMARY KEY,
     title TEXT NOT NULL,
     genres TEXT,
-    imdb_id TEXT NOT NULL, 
+    imdb_id VARCHAR(100) NOT NULL, 
     FOREIGN KEY (imdb_id) REFERENCES IMDBTitleBasics(id)
     );
 
 -- Création de la table Ratings
+DROP TABLE IF EXISTS Ratings;
 CREATE TABLE Ratings (
-    user_id INTEGER,
-    movie_id INTEGER,
+    id INTEGER PRIMARY KEY AUTO_INCREMENT,
+    user_id INTEGER NOT NULL,
+    movie_id INTEGER NOT NULL,
     rating FLOAT,
     timestamp DATETIME,
-    PRIMARY KEY (user_id, movie_id),
     FOREIGN KEY (movie_id) REFERENCES Movies(id)
 );
 
 -- Création de la table Tags
+DROP TABLE IF EXISTS Tags;
 CREATE TABLE Tags (
-    user_id INTEGER,
-    movie_id INTEGER,
+    id INTEGER PRIMARY KEY AUTO_INCREMENT,
+    user_id INTEGER NOT NULL,
+    movie_id INTEGER NOT NULL,
     tag TEXT,
     timestamp DATETIME,
-    PRIMARY KEY (user_id, movie_id, tag),
     FOREIGN KEY (movie_id) REFERENCES Movies(id)
 );
 
 -- Création de la table GenomeScores
+DROP TABLE IF EXISTS GenomeScores;
 CREATE TABLE GenomeScores (
-    movie_id INTEGER,
+    id INTEGER PRIMARY KEY AUTO_INCREMENT,
+    movie_id INTEGER NOT NULL,
     tag TEXT,
     relevance FLOAT,
-    PRIMARY KEY (movie_id, tag),
     FOREIGN KEY (movie_id) REFERENCES Movies(id)
 );
+
+SET FOREIGN_KEY_CHECKS = 1;
