@@ -20,7 +20,7 @@ def train_svd_model(n_factors=100, n_epochs=20):
     reader = Reader(rating_scale=(0, 5))  
     df_surprise = Dataset.load_from_df(ratings_df[['user_id', 'movie_id', 'rating']], reader)
 
-    svd = SVD(n_factors=100, n_epochs=20, random_state=42, verbose=True)
+    svd = SVD(n_factors=n_factors, n_epochs=n_epochs, random_state=42, verbose=True)
     start_time = time.time()    
     trainset = df_surprise.build_full_trainset()
     svd.fit(trainset)

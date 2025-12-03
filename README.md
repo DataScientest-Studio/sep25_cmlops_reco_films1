@@ -46,4 +46,13 @@ uvicorn api.api:api --app-dir src --host 0.0.0.0 --port 8000
 ## 6/ Test de l'API
 Sur un navigateur: http://localhost:8000/docs
 
+## 7/ Lancement du serveur MLflow en local
+mlflow server \
+  --host 0.0.0.0 \
+  --port 8080 \
+  --backend-store-uri file:///absolute_path/mlruns \
+  --default-artifact-root file:///absolute_path/mlruns \
+  --serve-artifacts
 
+## 8/ Lancement des expériences
+python ./src/model/experiment.py
