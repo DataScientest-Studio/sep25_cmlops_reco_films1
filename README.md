@@ -34,6 +34,7 @@ pip install -r requirements.txt
 
 ## 3/ Création de la base de données 
 ## Prerequis : installation MySQL server avec parametre local_infile = 1 dans /etc/mysql/mysql.conf.d/mysqld.cnf
+## Il faudra créer la base de données MySQL avec les commandes disponibles dans src/etl/create_db.sql
 ## création d'un fichier config.yaml basé sur config.example.yaml pour saisir les identifiants de connexion
 python ./src/etl/etl.py
 
