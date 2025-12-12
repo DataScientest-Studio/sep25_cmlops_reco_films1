@@ -1,0 +1,48 @@
+import pandas as pd
+from sklearn.kernel_approximation import svd
+from surprise import Dataset, Reader, SVD
+from surprise.model_selection import cross_validate
+import time
+import joblib
+import yaml
+
+def train_svd_model(n_factors=100, n_epochs=20):
+    # On charge les données de notation depuis la base de données MySQL dans un DataFrame pandas
+    start_time = time.time()
+    cfg = yaml.safe_load(open("config.yaml"))['mysql']
+    ratings_df = pd.read_sql("SELECT user_id, movie_id, rating FROM Ratings", con=f"mysql+pymysql://{cfg['user']}:{cfg['password']}@{cfg['host']}:{cfg.get('port',{cfg['port']})}/{cfg['database']}")    
+
+    print("Number of users: ", ratings_df['user_id'].nunique())
+    print("Number of movies: ", ratings_df['movie_id'].nunique())
+    print("Number of ratings: ", len(ratings_df))
+
+    # On utilise la librairie Surprise pour entraîner un modèle SVD
+    reader = Reader(rating_scale=(0, 5))  
+    df_surprise = Dataset.load_from_df(ratings_df[['user_id', 'movie_id', 'rating']], reader)
+
+    svd = SVD(n_factors=n_factors, n_epochs=n_epochs, random_state=42, verbose=True)
+    start_time = time.time()    
+    trainset = df_surprise.build_full_trainset()
+    svd.fit(trainset)
+    total_time = time.time() - start_time
+    print(f"Training SVD model in {total_time} seconds.")
+
+    # On sauvegarde le trainset pour une utilisation ultérieure
+    start_time = time.time()   
+    trainset_path = "models/trainset.joblib"
+    joblib.dump(trainset, trainset_path)
+    total_time = time.time() - start_time
+    print(f"Saving trainset in {total_time} seconds.")
+
+    # On sauvegarde le modèle entraîné
+    start_time = time.time()
+    joblib.dump(svd, "models/svd_model.joblib")
+    total_time_save = time.time() - start_time
+    print(f"Saving SVD model in {total_time_save} seconds.")
+
+    return total_time, total_time_save
+
+if __name__ == "__main__":
+    train_svd_model(100, 20)
+
+
