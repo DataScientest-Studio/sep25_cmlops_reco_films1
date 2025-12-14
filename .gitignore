@@ -1,3 +1,12 @@
 .venv/
 __pycache__/
 config.yaml
+
+# Ignorer les données
+data/
+
+# Ignorer les modèles
+models/
+
+# Ignorer l'environnement local
+.env
