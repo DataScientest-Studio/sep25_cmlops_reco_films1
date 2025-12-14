@@ -3,12 +3,12 @@ from model.training import train_svd_model
 from model.predict import predict_rating
 from model.predict import recommend_movies
 from pydantic import BaseModel
+from typing import Optional
 
 api = FastAPI()
 
 class TrainRequest(BaseModel):
-    n_factors: int
-    n_epochs: int
+    limit: Optional[int] = None
     
 class PredictRequest(BaseModel):
     user_id: int
@@ -20,8 +20,8 @@ class RecommendRequest(BaseModel):
 
 @api.post("/training")
 def train_model(request: TrainRequest):
-    training_time, saving_time = train_svd_model(n_factors=request.n_factors, n_epochs=request.n_epochs)
-    return {"n_factors": request.n_factors, "n_epochs": request.n_epochs, "training_time": training_time, "saving_time": saving_time}
+    training_time, saving_time = train_svd_model(limit=request.limit)
+    return {"training_time": training_time, "saving_time": saving_time}
 
 @api.post("/predict")
 def predict(request: PredictRequest):
