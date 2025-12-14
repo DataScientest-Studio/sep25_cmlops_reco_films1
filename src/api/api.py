@@ -2,13 +2,13 @@ from fastapi import FastAPI
 from src.model.training import train_svd_model 
 from src.model.predict import predict_rating 
 from src.model.predict import recommend_movies 
-from typing import List from pydantic 
-import BaseModel from pydantic 
-import Field 
+from typing import List 
+from pydantic import BaseModel 
+from pydantic import Field 
 import pandas as pd 
 from sqlalchemy import create_engine 
-import os from dotenv 
-import load_dotenv 
+import os 
+from dotenv import load_dotenv 
 
 # Charger les variables d'environnement 
 load_dotenv() 
@@ -51,10 +51,16 @@ class LoadRequest(BaseModel):
 #---------------------------------------------End Points---------------------------------- 
 @api.post("/training") 
 def train_model(request: TrainRequest): 
-    training_time, saving_time = 
-    train_svd_model(n_factors=request.n_factors, n_epochs=request.n_epochs) 
-    return {"n_factors": request.n_factors, "n_epochs": request.n_epochs,
-    "training_time": training_time, "saving_time": saving_time}
+    training_time, saving_time = train_svd_model(
+        n_factors=request.n_factors,
+        n_epochs=request.n_epochs
+        ) 
+    return {
+        "n_factors": request.n_factors, 
+        "n_epochs": request.n_epochs,
+        "training_time": training_time, 
+        "saving_time": saving_time
+        }
 
 @api.post("/predict")
 def predict(request: PredictRequest): 
@@ -77,7 +83,7 @@ def load_ratings(request: LoadRequest):
             df = pd.read_csv(path)
             df.rename(columns={ "userId": "user_id", "movieId": "movie_id" }, inplace=True)
             df["timestamp"] = pd.to_datetime(df["timestamp"], unit="s")
-            df.to_sql("Ratings", con=engine, if_exists="append", index=False)
+            df.to_sql("ratings", con=engine, if_exists="append", index=False)
             loaded_files.append(file_name)
         except Exception as e: 
             errors.append({file_name: str(e)}) 
