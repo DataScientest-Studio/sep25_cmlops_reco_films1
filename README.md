@@ -29,6 +29,10 @@ data
 python3 -m venv .venv
 source .venv/bin/activate
 
+## 1/ pour actu=iver sous Powershell
+## .venv\Scripts\Activate.ps1
+
+
 ## 2/ Installation des dépendances 
 pip install -r requirements.txt
 

@@ -69,9 +69,9 @@ CREATE TABLE Movies (
     FOREIGN KEY (imdb_id) REFERENCES IMDBTitleBasics(id)
     );
 
--- Création de la table Ratings
-DROP TABLE IF EXISTS Ratings;
-CREATE TABLE Ratings (
+-- Création de la table ratings
+DROP TABLE IF EXISTS ratings;
+CREATE TABLE ratings (
     id INTEGER PRIMARY KEY AUTO_INCREMENT,
     user_id INTEGER NOT NULL,
     movie_id INTEGER NOT NULL,
