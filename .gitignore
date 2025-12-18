@@ -1,6 +1,7 @@
 .venv/
 __pycache__/
 config.yaml
+mlruns/
 
 # Ignorer les données
 data/

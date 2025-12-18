@@ -1,14 +1,33 @@
-from fastapi import FastAPI 
-from src.model.training import train_svd_model 
-from src.model.predict import predict_rating 
-from src.model.predict import recommend_movies 
+from fastapi import FastAPI
+from model.training import train_svd_model
+from model.predict import predict_rating
+from model.predict import recommend_movies
+from pydantic import BaseModel
+from typing import Optional 
 from typing import List 
-from pydantic import BaseModel 
 from pydantic import Field 
 import pandas as pd 
 from sqlalchemy import create_engine 
 import os 
 from dotenv import load_dotenv 
+
+api = FastAPI()
+
+class TrainRequest(BaseModel):
+    limit: Optional[int] = None
+    
+class PredictRequest(BaseModel):
+    user_id: int
+    movie_id: int
+
+class RecommendRequest(BaseModel):
+    user_id: int
+    n_recommendations: int = 10
+
+@api.post("/training")
+def train_model(request: TrainRequest):
+    training_time, saving_time = train_svd_model(limit=request.limit)
+    return {"training_time": training_time, "saving_time": saving_time}
 
 # Charger les variables d'environnement 
 load_dotenv() 
@@ -22,18 +41,6 @@ engine = create_engine( f"mysql+pymysql://{os.getenv('USER')}:{os.getenv('PASSWO
 api = FastAPI() 
 
 #--------------------------------------------Schemas ---------------------------------- 
-
-class TrainRequest(BaseModel): 
-    n_factors: int 
-    n_epochs: int 
-
-class PredictRequest(BaseModel): 
-    user_id: int 
-    movie_id: int 
-
-class RecommendRequest(BaseModel): 
-    user_id: int 
-    n_recommendations: int = 10 
 
 class LoadRequest(BaseModel): 
     fileNames: list[str] = Field( 
@@ -49,18 +56,6 @@ class LoadRequest(BaseModel):
                                "ratings-10.csv" ], description="Liste des fichiers à charger depuis DATA_RAW_DIR" ) 
 
 #---------------------------------------------End Points---------------------------------- 
-@api.post("/training") 
-def train_model(request: TrainRequest): 
-    training_time, saving_time = train_svd_model(
-        n_factors=request.n_factors,
-        n_epochs=request.n_epochs
-        ) 
-    return {
-        "n_factors": request.n_factors, 
-        "n_epochs": request.n_epochs,
-        "training_time": training_time, 
-        "saving_time": saving_time
-        }
 
 @api.post("/predict")
 def predict(request: PredictRequest): 
