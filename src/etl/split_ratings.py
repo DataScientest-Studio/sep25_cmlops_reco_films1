@@ -1,8 +1,10 @@
 import pandas as pd
 import os
+import yaml
 
 # Chemin du fichier source
-source_file = r"C:\Perso\Datascientest\_MLOps\sep25_cmlops_reco_films1\data\raw\ml-20m\ratings.csv"
+cfg = yaml.safe_load(open("config.yaml"))['csv']
+source_file = os.path.join(cfg['base_path'], "ratings.csv")
 
 # Dossier de sortie (même que source)
 output_dir = os.path.dirname(source_file)

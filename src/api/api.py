@@ -8,10 +8,12 @@ from typing import List
 from pydantic import Field 
 import pandas as pd 
 from sqlalchemy import create_engine 
-import os 
-from dotenv import load_dotenv 
+import yaml
+import os
 
 api = FastAPI()
+
+#--------------------------------------------Schemas ---------------------------------- 
 
 class TrainRequest(BaseModel):
     limit: Optional[int] = None
@@ -23,24 +25,6 @@ class PredictRequest(BaseModel):
 class RecommendRequest(BaseModel):
     user_id: int
     n_recommendations: int = 10
-
-@api.post("/training")
-def train_model(request: TrainRequest):
-    training_time, saving_time = train_svd_model(limit=request.limit)
-    return {"training_time": training_time, "saving_time": saving_time}
-
-# Charger les variables d'environnement 
-load_dotenv() 
-
-# Récupérer le chemin des données brutes depuis .env 
-base_path = os.getenv("DATA_RAW_DIR") 
-
-# Connexion MySQL 
-engine = create_engine( f"mysql+pymysql://{os.getenv('USER')}:{os.getenv('PASSWORD')}@{os.getenv('HOST')}:3306/{os.getenv('DATABASE')}" ) 
-
-api = FastAPI() 
-
-#--------------------------------------------Schemas ---------------------------------- 
 
 class LoadRequest(BaseModel): 
     fileNames: list[str] = Field( 
@@ -55,7 +39,15 @@ class LoadRequest(BaseModel):
                                "ratings-9.csv", 
                                "ratings-10.csv" ], description="Liste des fichiers à charger depuis DATA_RAW_DIR" ) 
 
+
 #---------------------------------------------End Points---------------------------------- 
+
+
+@api.post("/training")
+def train_model(request: TrainRequest):
+    training_time, saving_time = train_svd_model(limit=request.limit)
+    return {"training_time": training_time, "saving_time": saving_time}
+
 
 @api.post("/predict")
 def predict(request: PredictRequest): 
@@ -68,13 +60,24 @@ def recommend(request: RecommendRequest):
     recommendations = recommend_movies(user_id=request.user_id, n_recommendations=request.n_recommendations) 
     return {"user_id": request.user_id, "recommendations": recommendations} 
 
+# Connexion MySQL   
 @api.post("/load_ratings") 
 def load_ratings(request: LoadRequest): 
     loaded_files = [] 
     errors = [] 
+
+    # On truncate la table Ratings avant de charger de nouveaux fichiers
+    cfg = yaml.safe_load(open("config.yaml"))['mysql'] 
+    engine = create_engine( f"mysql+pymysql://{cfg['user']}:{cfg['password']}@{cfg['host']}:{cfg['port']}/{cfg['database']}" ) 
+    try:
+        with engine.connect() as conn:
+            conn.execute("TRUNCATE TABLE Ratings;")
+    except Exception as e:
+        return {"error": f"Failed to truncate Ratings table: {str(e)}"}
+
     for file_name in request.fileNames:
         try: 
-            path = os.path.join(base_path, file_name)
+            path = os.path.join(cfg['base_path'], file_name)
             df = pd.read_csv(path)
             df.rename(columns={ "userId": "user_id", "movieId": "movie_id" }, inplace=True)
             df["timestamp"] = pd.to_datetime(df["timestamp"], unit="s")
@@ -90,7 +93,10 @@ def load_ratings(request: LoadRequest):
 @api.get("/list_ratings_files")
 def list_ratings_files():
     try:
-        files = [f for f in os.listdir(base_path) if f.endswith(".csv")]
+        cfg = yaml.safe_load(open("config.yaml"))['csv']
+        base_path = cfg['base_path']
+        files = [f for f in os.listdir(base_path) if f.endswith(".csv") and f.startswith("ratings")]
         return {"available_files": files}
     except Exception as e:
         return {"error": str(e)}
+    

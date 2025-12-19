@@ -4,3 +4,6 @@ mysql:
   user: reco_user
   password: mdp_a_renseiger
   database: reco_films
+
+csv:
+  base_path: ./data/raw/ml-20m/
