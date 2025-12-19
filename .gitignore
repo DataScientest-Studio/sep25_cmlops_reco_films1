@@ -11,3 +11,8 @@ models/
 
 # Ignorer l'environnement local
 .env
+
+# On ignore les dossiers utiliser pour Docker
+mlflow_db/
+mysql_data/
+mlflow_data/

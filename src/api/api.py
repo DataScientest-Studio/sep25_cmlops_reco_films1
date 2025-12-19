@@ -8,6 +8,7 @@ from typing import List
 from pydantic import Field 
 import pandas as pd 
 from sqlalchemy import create_engine 
+from sqlalchemy import text
 import yaml
 import os
 
@@ -67,21 +68,23 @@ def load_ratings(request: LoadRequest):
     errors = [] 
 
     # On truncate la table Ratings avant de charger de nouveaux fichiers
-    cfg = yaml.safe_load(open("config.yaml"))['mysql'] 
-    engine = create_engine( f"mysql+pymysql://{cfg['user']}:{cfg['password']}@{cfg['host']}:{cfg['port']}/{cfg['database']}" ) 
+    cfg = yaml.safe_load(open("config.yaml"))
+    mysql_cfg = cfg["mysql"]
+    csv_cfg = cfg["csv"]
+    engine = create_engine( f"mysql+pymysql://{mysql_cfg['user']}:{mysql_cfg['password']}@{mysql_cfg['host']}:{mysql_cfg['port']}/{mysql_cfg['database']}" ) 
     try:
         with engine.connect() as conn:
-            conn.execute("TRUNCATE TABLE Ratings;")
+            conn.execute(text("TRUNCATE TABLE Ratings;"))
     except Exception as e:
         return {"error": f"Failed to truncate Ratings table: {str(e)}"}
 
     for file_name in request.fileNames:
         try: 
-            path = os.path.join(cfg['base_path'], file_name)
+            path = os.path.join(csv_cfg['base_path'], file_name)
             df = pd.read_csv(path)
             df.rename(columns={ "userId": "user_id", "movieId": "movie_id" }, inplace=True)
             df["timestamp"] = pd.to_datetime(df["timestamp"], unit="s")
-            df.to_sql("ratings", con=engine, if_exists="append", index=False)
+            df.to_sql("Ratings", con=engine, if_exists="append", index=False)
             loaded_files.append(file_name)
         except Exception as e: 
             errors.append({file_name: str(e)}) 

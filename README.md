@@ -66,3 +66,10 @@ renvoi une liste de recommandations pour un utilisateur donné de films qu'il n'
 -> Sur un navigateur: http://localhost:8000/docs
 
 
+## 7/ Lancement de l'api dockerisée
+### Pour le build et démarrage des containers: 
+docker compose up --build
+
+### Pour l'arret et la suppression des containers 
+docker compose down --remove-orphans
+

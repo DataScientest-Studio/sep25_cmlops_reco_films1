@@ -13,7 +13,8 @@ import os
 
 def set_best_model(rmse, experiment_id):
     # On détermine à partir du RMSE si c'est le meilleur modèle 
-    client = MlflowClient(tracking_uri="http://localhost:8080")
+    cfg = yaml.safe_load(open("config.yaml"))['mlflow']
+    client = MlflowClient(tracking_uri=cfg['tracking_uri'])
 
     # On récupère le run id du meilleur modèle enregistré 
     try:
@@ -69,7 +70,8 @@ def train_svd_model(n_factors=50, n_epochs=10, limit=None):
     print(f"RMSE: {rmse}, MAE: {mae}, MSE: {mse}")
 
     # On initie MLflow pour le suivi des expériences en local
-    mlflow.set_tracking_uri("http://localhost:8080")
+    cfg_mlflow = yaml.safe_load(open("config.yaml"))['mlflow']
+    mlflow.set_tracking_uri(cfg_mlflow['tracking_uri'])
     experiment = mlflow.set_experiment("SVD reco films")
 
     # On log un run avec la date et heure 

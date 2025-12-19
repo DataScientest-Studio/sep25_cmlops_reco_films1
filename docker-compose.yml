@@ -1,0 +1,43 @@
+version: "3.9"
+
+services:
+  api:
+    build: .
+    depends_on:
+      - mlflow
+      - mysql
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data/raw:/app/data/raw
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:latest
+    environment:
+      MLFLOW_SERVER_ALLOWED_HOSTS: "mlflow:8080, localhost:8080" # Pour autoriser les connexions depuis l'API en local et la connexion à l'interface depuis le navigateur
+    command: >
+      mlflow server
+      --host 0.0.0.0
+      --port 8080
+      --backend-store-uri sqlite:////mlflow_db/mlflow.db
+      --artifacts-destination /mlflow_artifacts
+      --serve-artifacts
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./mlflow_data:/mlflow_artifacts
+      - ./mlflow_db:/mlflow_db
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: reco_films
+      MYSQL_USER: reco_user
+      MYSQL_PASSWORD: reco_user
+    ports:
+      - "3307:3306" # on expose sur 3307 pour éviter le conflit avec 3306 utilisé pour mysql local
+    volumes:
+      - ./mysql_data:/var/lib/mysql
+      - ./src/etl/create_db.sql:/docker-entrypoint-initdb.d/01_create_db.sql:ro
+    

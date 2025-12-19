@@ -2,12 +2,15 @@ import joblib
 import time
 import mlflow
 from mlflow import MlflowClient
+import yaml
 
 
 def predict_rating(user_id, movie_id):
     # On prédit la note pour un utilisateur et un film donnés
     start_time = time.time()
     # On charge le meilleur modèle SVD sauvegardé depuis MLflow Model Registry
+    cfg_mlflow = yaml.safe_load(open("config.yaml"))['mlflow']
+    mlflow.set_tracking_uri(cfg_mlflow["tracking_uri"])
     svd = mlflow.sklearn.load_model("models:/SVD_Model@best_model")
     load_time = time.time() - start_time
     start_time = time.time()
@@ -17,7 +20,8 @@ def predict_rating(user_id, movie_id):
 
 def load_trainset():
     trainset = None
-    client = MlflowClient(tracking_uri="http://localhost:8080")
+    cfg_mlflow = yaml.safe_load(open("config.yaml"))['mlflow']
+    client = MlflowClient(tracking_uri=cfg_mlflow["tracking_uri"])
     best_model_version = client.get_model_version_by_alias(name="SVD_Model", alias="best_model")
     print(f"Loading trainset from best model version: {best_model_version.version}")
 
