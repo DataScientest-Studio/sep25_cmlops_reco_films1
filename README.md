@@ -52,6 +52,10 @@ mlflow server \
 
 ## 6/ Test de l'API
  Au moins un training doit être appelé avant de pouvoir faire un predict ou un recommend
+
+### endpoint: load_ratings
+Permet de charger les données de ratings (fichier original ratings.csv découpé en 10) pour simuler l'arrivée de nouvelle donnée. 
+A noter que load_ratings fait un truncate table au départ pour éviter d'avoir des doublons et repartir d'une table propre. 
 ### endpoint: training
 Pas d'input obligatoire. On peut cependant définir une limit sur le nombre de data à utiliser avec l'input "limit"
 les entrainements écrivent un nouveau run dans MLflow et enregistre le modèle correspondant dans le model registry 
