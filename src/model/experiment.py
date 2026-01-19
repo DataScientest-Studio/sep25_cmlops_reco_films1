@@ -6,7 +6,6 @@ from surprise import accuracy
 import time
 import joblib
 import yaml
-from mlflow import MlflowClient
 import mlflow
 
 def experiment(X_train, X_test, experiment_name, run_name):
@@ -26,8 +25,6 @@ def experiment(X_train, X_test, experiment_name, run_name):
     print(f"RMSE: {rmse}, MAE: {mae}, MSE: {mse}")
 
     # On sauvegarde l'entrainement dans MLflow
-    client = MlflowClient(tracking_uri="http://localhost:8080")
-
     mlflow.set_tracking_uri("http://localhost:8080")
     mlflow.set_experiment(experiment_name)
     with mlflow.start_run(run_name=run_name):

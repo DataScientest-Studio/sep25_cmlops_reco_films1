@@ -1,3 +1,13 @@
 .venv/
 __pycache__/
 config.yaml
+mlruns/
+
+# Ignorer les données
+data/
+
+# Ignorer les modèles
+models/
+
+# Ignorer l'environnement local
+.env
