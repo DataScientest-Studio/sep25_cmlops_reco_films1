@@ -7,3 +7,6 @@ mysql:
 
 csv:
   base_path: ./data/raw/ml-20m/
+
+mlflow: 
+  tracking_uri: http://mlflow:8080

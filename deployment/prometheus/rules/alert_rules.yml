@@ -1,0 +1,11 @@
+groups:
+  - name: api-alerts
+    rules:
+      - alert: apiDown
+        expr: up{job="api"} == 0 # La condition PromQL qui déclenche l'alerte
+        for: 10s # L'alerte se déclenche si la condition est vraie pendant 10 secondes continues
+        labels:
+          severity: critical # Label pour la gravité de l'alerte (utile pour filtrer et prioriser)
+        annotations:
+          summary: "L'API est DOWN."
+          description: "Le job 'api' est en statut DOWN (injoignable) depuis plus de 10 secondes. Veuillez vérifier le conteneur `api`."

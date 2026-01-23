@@ -67,13 +67,14 @@ utilise le modèle avec l'alias "best_model" pour faire la prédiction
 inputs obligatoires: "user_id" et "n_recommendations" 
 renvoi une liste de recommandations pour un utilisateur donné de films qu'il n'as pas encore vus, en utilisant le "best_model"
 
--> Sur un navigateur: http://localhost:8000/docs
-
-
 ## 7/ Lancement de l'api dockerisée
 ### Pour le build et démarrage des containers: 
-docker compose up --build
+make all
 
 ### Pour l'arret et la suppression des containers 
-docker compose down --remove-orphans
+make stop
+
+### url pour tester l'api: http://localhost:8000/docs
+
+### url pour mlflow: http://localhost:8080
 
