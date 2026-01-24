@@ -15,7 +15,7 @@ import os
 from prometheus_client import Counter, Histogram, generate_latest, CollectorRegistry, Gauge
 from evidently.report import Report
 from evidently.metric_preset import DataDriftPreset
-from evidently.metrics import ColumnDriftMetric 
+from evidently.pipeline.column_mapping import ColumnMapping
 
 api = FastAPI()
 
@@ -40,9 +40,21 @@ api_request_duration_seconds = Histogram(
 
 # Gauge 'evidently_data_drift_detected_status' pour notifier la detection de drift
 # ceci permettra de voir rapidement si un drift est detecte et on pourra analyser plus en detail les rapports d'evidently
-evidently_data_drift_detected_status = Gauge(
-    'evidently_data_drift_detected_status',
+evidently_dataset_drift_detected_status = Gauge(
+    'evidently_dataset_drift_detected_status',
     'Data drift detected status (1 if drift detected, 0 otherwise)',
+    registry=registry
+)
+
+evidently_rating_drift_detected_status = Gauge(
+    'evidently_rating_drift_detected_status',
+    'Data drift detected status (1 if drift detected, 0 otherwise)',
+    registry=registry
+)
+
+evidently_rating_drift_score = Gauge(
+    'evidently_rating_drift_score',
+    'Data drift score for ratings',
     registry=registry
 )
 
@@ -118,7 +130,6 @@ def load_ratings(request: LoadRequest):
     mysql_cfg = cfg["mysql"]
     csv_cfg = cfg["csv"]
     engine = create_engine( f"mysql+pymysql://{mysql_cfg['user']}:{mysql_cfg['password']}@{mysql_cfg['host']}:{mysql_cfg['port']}/{mysql_cfg['database']}" ) 
-    drift_detected = 0
     for file_name in request.fileNames:
         try: 
             path = os.path.join(csv_cfg['base_path'], file_name)
@@ -135,13 +146,37 @@ def load_ratings(request: LoadRequest):
                 reference_df = pd.read_csv(reference_path)
                 reference_df.rename(columns={ "userId": "user_id", "movieId": "movie_id" }, inplace=True)
                 reference_df["timestamp"] = pd.to_datetime(reference_df["timestamp"], unit="s")
-                current_report = Report(metrics=[DataDriftPreset(), ColumnDriftMetric(column_name="rating")])
-                current_report.run(reference_data=reference_df, current_data=df)
-                result = current_report.as_dict()
-                dataset_drift_detected = int(result["metrics"][0]["result"].get("dataset_drift", 0))
-                rating_drift_detected = int(result["metrics"][1]["result"].get("drift_detected", 0))
-                if dataset_drift_detected or rating_drift_detected:
-                    drift_detected = 1
+
+                column_mapping_drift = ColumnMapping()
+                column_mapping_drift.target = 'rating'
+                column_mapping_drift.numerical_features = ["user_id", "movie_id", "rating"]
+                
+
+                current_report = Report(metrics=[DataDriftPreset()])
+                current_report.run(reference_data=reference_df, current_data=df, column_mapping=column_mapping_drift)
+                result = current_report.as_dict()["metrics"][1]["result"]
+
+                print('report result:', result)  
+
+                dataset_drift_detected = int(result["dataset_drift"])
+                rating_drift_detected = int(result["drift_by_columns"]["rating"]["drift_detected"])
+
+                if dataset_drift_detected:
+                    evidently_dataset_drift_detected_status.set(1)
+                else:
+                    evidently_dataset_drift_detected_status.set(0)
+
+                if rating_drift_detected:
+                    evidently_rating_drift_detected_status.set(1)
+                else:
+                    evidently_rating_drift_detected_status.set(0)
+
+                evidently_rating_drift_score.set(result["drift_by_columns"]["rating"]["drift_score"])
+
+
+
+
+
         except Exception as e: 
             end_time = time.time()
             duration = end_time - start_time
@@ -155,10 +190,7 @@ def load_ratings(request: LoadRequest):
     # log Prometheus
     api_requests_total.labels(endpoint="/load_ratings", method="POST", status_code="200").inc()
     api_request_duration_seconds.labels(endpoint="/load_ratings", method="POST", status_code="200").observe(duration)
-    if drift_detected:
-        evidently_data_drift_detected_status.set(1)
-    else:
-        evidently_data_drift_detected_status.set(0)
+
 
     return {
         "success": loaded_files,
