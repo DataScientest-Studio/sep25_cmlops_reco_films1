@@ -25,7 +25,7 @@ data
             ratings.csv
             tags.csv
 
-## 1/ Creation d'un virtual env sur python
+## 1/ Creation d'un virtual env sur python et sous MS DOS python -m venv .venv puis .venv\Scripts\activate.bat
 python3 -m venv .venv
 source .venv/bin/activate
 
@@ -42,13 +42,16 @@ python ./src/etl/etl.py
 ## 4/ Lancement de l'API 
 uvicorn api.api:api --app-dir src --host 0.0.0.0 --port 8000
 
-## 5/ Lancement du serveur MLflow en local
+## 5/ Lancement du serveur MLflow en local et sous MS DOS mlflow server --host 0.0.0.0 --port 8080 --backend-store-uri file:///C:/absolute_path/mlruns --default-artifact-root file:///C:/absolute_path/mlruns --serve-artifacts
+
 mlflow server \
   --host 0.0.0.0 \
   --port 8080 \
   --backend-store-uri file:///absolute_path/mlruns \
   --default-artifact-root file:///absolute_path/mlruns \
   --serve-artifacts
+
+-> Sur un navigateur: http://localhost:8000/
 
 ## 6/ Test de l'API
  Au moins un training doit être appelé avant de pouvoir faire un predict ou un recommend
