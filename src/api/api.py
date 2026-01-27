@@ -73,18 +73,7 @@ class RecommendRequest(BaseModel):
     n_recommendations: int = 10
 
 class LoadRequest(BaseModel): 
-    fileNames: list[str] = Field( 
-                    default=[ "ratings-1.csv",
-                               "ratings-2.csv", 
-                               "ratings-3.csv", 
-                               "ratings-4.csv", 
-                               "ratings-5.csv", 
-                               "ratings-6.csv", 
-                               "ratings-7.csv", 
-                               "ratings-8.csv", 
-                               "ratings-9.csv", 
-                               "ratings-10.csv" ], description="Liste des fichiers à charger depuis DATA_RAW_DIR" ) 
-
+    fileNames: list[str] 
 
 #---------------------------------------------End Points---------------------------------- 
 

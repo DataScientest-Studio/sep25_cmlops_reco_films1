@@ -68,29 +68,62 @@ services:
       - prometheus
     restart: always
 
-    # service node_exporter:
+  # service node_exporter:
   node-exporter:
-      image: prom/node-exporter:latest
-      container_name: node-exporter
-      ports:
-        - "9100:9100"
-        # C'est sur ce port que Prometheus viendra "scraper" les métriques système.
-      volumes:
-        - /proc:/host/proc:ro
-        # Le répertoire '/proc' contient des informations vitales sur l'état du noyau Linux et des processus en cours (utilisation CPU par process, infos mémoire, etc.).
-        - /sys:/host/sys:ro
-        # Le répertoire '/sys' expose des informations sur les périphériques matériels et les configurations du noyau.
-        - /:/rootfs:ro
-        # C'est essentiel pour que Node Exporter puisse accéder aux informations sur l'utilisation de l'espace disque de l'hôte.
-      command:
-      # Ces commandes indiquent à Node Exporter où trouver les systèmes de fichiers de l'hôte que nous venons de monter via les volumes.
-        - '--path.procfs=/host/proc'
-        - '--path.sysfs=/host/sys'
-        - '--path.rootfs=/rootfs'
-        - '--collector.filesystem.mount-points-exclude=^/(dev|proc|sys|var/lib/docker/.+|var/run/docker/netns/.+)$'
-      restart: always
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    ports:
+      - "9100:9100"
+      # C'est sur ce port que Prometheus viendra "scraper" les métriques système.
+    volumes:
+      - /proc:/host/proc:ro
+      # Le répertoire '/proc' contient des informations vitales sur l'état du noyau Linux et des processus en cours (utilisation CPU par process, infos mémoire, etc.).
+      - /sys:/host/sys:ro
+      # Le répertoire '/sys' expose des informations sur les périphériques matériels et les configurations du noyau.
+      - /:/rootfs:ro
+      # C'est essentiel pour que Node Exporter puisse accéder aux informations sur l'utilisation de l'espace disque de l'hôte.
+    command:
+    # Ces commandes indiquent à Node Exporter où trouver les systèmes de fichiers de l'hôte que nous venons de monter via les volumes.
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+      - '--collector.filesystem.mount-points-exclude=^/(dev|proc|sys|var/lib/docker/.+|var/run/docker/netns/.+)$'
+    restart: always
     
+  # service airflow:
+  airflow:
+    build: 
+      context: . 
+      dockerfile: Dockerfile.airflow
+    depends_on:
+      - api
+      - mysql
+    environment:
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+    volumes:
+      - airflow_data:/opt/airflow
+      - ./airflow/dags:/opt/airflow/dags
+      - ./data/raw:/opt/airflow/data/raw
+    ports:
+      - "8081:8080"
+    command: webserver
+
+  airflow-scheduler:
+    build: 
+      context: . 
+      dockerfile: Dockerfile.airflow
+    depends_on:
+      - airflow
+    volumes:
+      - airflow_data:/opt/airflow
+      - ./airflow/dags:/opt/airflow/dags
+      - ./data/raw:/opt/airflow/data/raw
+    command: scheduler
+  
+
+
 volumes:
+  airflow_data:
   prometheus_data: {}
   grafana_data: {}
     

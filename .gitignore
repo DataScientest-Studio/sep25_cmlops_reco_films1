@@ -1,18 +1,26 @@
+# Environnements Python
 .venv/
 __pycache__/
-config.yaml
-mlruns/
 
-# Ignorer les données
-data/
+# Données locales
+data/raw/
+data/processed/
+data/interim/
 
-# Ignorer les modèles
-models/
+# Airflow
+airflow/logs/
+airflow/plugins/
+airflow_data/
 
-# Ignorer l'environnement local
-.env
-
-# On ignore les dossiers utiliser pour Docker
-mlflow_db/
+# Bases de données locales
 mysql_data/
+mlflow_db/
 mlflow_data/
+
+# Artefacts lourds
+models/
+*.pkl
+*.joblib
+
+# Docker
+*.pid

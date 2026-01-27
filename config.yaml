@@ -1,0 +1,13 @@
+mysql:
+  host: mysql
+  port: 3306
+  user: reco_user
+  password: reco_user
+  database: reco_films
+
+csv:
+  base_path: /app/data/raw/ml-20m
+
+mlflow:
+  tracking_uri: "http://localhost:8080"
+

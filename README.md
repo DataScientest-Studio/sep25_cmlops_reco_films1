@@ -81,3 +81,58 @@ make stop
 
 ### url pour mlflow: http://localhost:8080
 
+### Airflow → http://localhost:8081
+
+### Grafana → http://localhost:3000
+
+### Prometheus → http://localhost:9090
+
+### Airflow fonctionnement et exemple d'utilisation
+📥 Fonctionnement de l’ingestion incrémentale (Airflow → FastAPI → MySQL)
+Cette section décrit le fonctionnement du pipeline d’ingestion des fichiers ratings-*.csv via Airflow.
+L’objectif est de simuler l’arrivée progressive de nouvelles données de notation (ratings) et de ne charger que les nouveaux fichiers, sans jamais recharger ceux déjà traités.
+
+🎯 Objectif
+Le DAG ingestion_ratings_dag implémente une ingestion incrémentale, c’est‑à‑dire :
+
+il détecte automatiquement les fichiers présents dans data/raw/ml-20m
+il identifie uniquement ceux qui n’ont pas encore été chargés
+il appelle l’API FastAPI /load_ratings uniquement pour ces nouveaux fichiers
+il évite tout doublon dans MySQL
+il déclenche l’entraînement (training_svd_dag) uniquement si de nouvelles données ont été ingérées
+📂 Où déposer les fichiers ?
+Les fichiers doivent être placés dans :
+data/raw/ml-20m/
+
+🧪 Exemple concret d’utilisation
+1️⃣ Premier run
+Dossier :
+ratings-1.csv
+ratings-2.csv
+Airflow charge les 2 fichiers.
+
+2️⃣ Deuxième run
+Vous ajoutez :
+ratings-3.csv
+ratings-4.csv
+Dossier :
+ratings-1.csv
+ratings-2.csv
+ratings-3.csv
+ratings-4.csv
+
+Airflow détecte :
+Nouveaux fichiers = ["ratings-3.csv", "ratings-4.csv"]
+Il ne recharge pas les fichiers 1 et 2.
+
+3️⃣ Troisième run
+Vous ajoutez :
+ratings-5.csv
+ratings-6.csv
+Airflow charge uniquement ces deux fichiers.
+
+
+### Airflow 
+user:admin
+pwd:admin
+

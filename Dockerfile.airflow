@@ -1,0 +1,9 @@
+FROM apache/airflow:2.9.0-python3.10
+
+USER airflow
+RUN pip install --no-cache-dir apache-airflow[sqlite]==2.9.0
+
+# Initialisation de la DB Airflow
+RUN airflow db init
+
+
