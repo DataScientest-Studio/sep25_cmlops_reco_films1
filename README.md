@@ -134,5 +134,6 @@ Airflow charge uniquement ces deux fichiers.
 
 ### Airflow 
 user:admin
-pwd:admin
+le password est à récupérer au lancement des containers car il est généré automatiquement par le mode standalone de airflow 
+-> docker compose logs airflow | grep -i password 
 

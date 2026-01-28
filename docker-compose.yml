@@ -92,9 +92,7 @@ services:
     
   # service airflow:
   airflow:
-    build: 
-      context: . 
-      dockerfile: Dockerfile.airflow
+    image: apache/airflow:2.9.0-python3.10
     depends_on:
       - api
       - mysql
@@ -106,20 +104,7 @@ services:
       - ./data/raw:/opt/airflow/data/raw
     ports:
       - "8081:8080"
-    command: webserver
-
-  airflow-scheduler:
-    build: 
-      context: . 
-      dockerfile: Dockerfile.airflow
-    depends_on:
-      - airflow
-    volumes:
-      - airflow_data:/opt/airflow
-      - ./airflow/dags:/opt/airflow/dags
-      - ./data/raw:/opt/airflow/data/raw
-    command: scheduler
-  
+    command: standalone
 
 
 volumes:
