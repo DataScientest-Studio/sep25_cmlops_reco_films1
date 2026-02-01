@@ -10,6 +10,7 @@ API_URL = "http://api:8000/load_ratings"
 
 # chemin des fichiers
 DATA_PATH = "/opt/airflow/data/raw/ml-20m"
+PROCESSED_PATH = "/opt/airflow/data/raw/ml-20m/processed"
 
 def detect_new_files(**context):
     # Tous les fichiers ratings-*.csv présents dans le dossier
@@ -18,16 +19,10 @@ def detect_new_files(**context):
         if f.startswith("ratings") and f.endswith(".csv")
     ])
 
-    # Récupérer les fichiers déjà chargés (stockés dans XCom)
-    already_loaded = context["ti"].xcom_pull(
-        key="loaded_files",
-        task_ids="load_ratings"
-    ) or []
+    # Détecter les nouveaux fichiers (ceux qui restent dans DATA_PATH)
+    print(f"Nouveaux fichiers détectés : {all_files}")
 
-    # Détecter les nouveaux fichiers
-    new_files = [f for f in all_files if f not in already_loaded]
-
-    return new_files
+    return all_files
 
 
 def call_load_ratings(**context):
@@ -37,11 +32,33 @@ def call_load_ratings(**context):
     if not new_files:
         return []
 
+    print(f"Chargement des fichiers : {new_files}")
+
     response = requests.post(API_URL, json={"fileNames": new_files})
     response.raise_for_status()
 
     # On renvoie la liste des fichiers chargés avec succès
     return response.json()["success"]
+
+
+def move_processed_files(**context):
+    processed_files = context["ti"].xcom_pull(task_ids="load_ratings") or []
+
+    if not processed_files:
+        return []
+
+    os.makedirs(PROCESSED_PATH, exist_ok=True)
+
+    moved = []
+    for file_name in processed_files:
+        src = os.path.join(DATA_PATH, file_name)
+        dst = os.path.join(PROCESSED_PATH, file_name)
+        if os.path.exists(src):
+            os.rename(src, dst)
+            moved.append(file_name)
+
+    print(f"Fichiers déplacés vers processed : {moved}")
+    return moved
 
 
 
@@ -64,6 +81,11 @@ with DAG(
         python_callable=call_load_ratings
 
         )
+
+    move_processed_task = PythonOperator(
+        task_id="move_processed_files",
+        python_callable=move_processed_files
+    )
     # Déclenchement automatique du DAG d’entraînement à la fin de l’ingestion. 
     trigger_training = TriggerDagRunOperator( 
         task_id="trigger_training", 
@@ -71,4 +93,4 @@ with DAG(
     ) 
 
     # Dépendance : l’entraînement démarre uniquement si l’ingestion est terminée avec succès. 
-    detect_task >> ingestion_task >> trigger_training
+    detect_task >> ingestion_task >> move_processed_task >> trigger_training

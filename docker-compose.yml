@@ -93,6 +93,7 @@ services:
   # service airflow:
   airflow:
     image: apache/airflow:2.9.0-python3.10
+    user: "${AIRFLOW_UID:-1000}:0" # permet de donner les bons droits aux fichiers créés par airflow (user hote)
     depends_on:
       - api
       - mysql
@@ -108,7 +109,7 @@ services:
 
 
 volumes:
-  airflow_data:
+  airflow_data: {}
   prometheus_data: {}
   grafana_data: {}
     

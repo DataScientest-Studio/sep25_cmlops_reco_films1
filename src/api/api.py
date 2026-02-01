@@ -128,39 +128,38 @@ def load_ratings(request: LoadRequest):
             df.to_sql("Ratings", con=engine, if_exists="append", index=False)
             loaded_files.append(file_name)
 
-            # Le fichier ratings-1.csv est le fichier de référence
-            if file_name != 'ratings-1.csv':
-                # on vérifie le drift du dataset general et le drift de la colonne ratings par rapport au fichier de référence 
-                reference_path = os.path.join(csv_cfg['base_path'], 'ratings-1.csv')
-                reference_df = pd.read_csv(reference_path)
-                reference_df.rename(columns={ "userId": "user_id", "movieId": "movie_id" }, inplace=True)
-                reference_df["timestamp"] = pd.to_datetime(reference_df["timestamp"], unit="s")
+            # Le fichier ratings-1.csv = drift_ref.csv est le fichier de référence
+            # on vérifie le drift du dataset general et le drift de la colonne ratings par rapport au fichier de référence 
+            reference_path = os.path.join(csv_cfg['base_path'], 'drift_ref.csv')
+            reference_df = pd.read_csv(reference_path)
+            reference_df.rename(columns={ "userId": "user_id", "movieId": "movie_id" }, inplace=True)
+            reference_df["timestamp"] = pd.to_datetime(reference_df["timestamp"], unit="s")
 
-                column_mapping_drift = ColumnMapping()
-                column_mapping_drift.target = 'rating'
-                column_mapping_drift.numerical_features = ["user_id", "movie_id", "rating"]
-                
+            column_mapping_drift = ColumnMapping()
+            column_mapping_drift.target = 'rating'
+            column_mapping_drift.numerical_features = ["user_id", "movie_id", "rating"]
+            
 
-                current_report = Report(metrics=[DataDriftPreset()])
-                current_report.run(reference_data=reference_df, current_data=df, column_mapping=column_mapping_drift)
-                result = current_report.as_dict()["metrics"][1]["result"]
+            current_report = Report(metrics=[DataDriftPreset()])
+            current_report.run(reference_data=reference_df, current_data=df, column_mapping=column_mapping_drift)
+            result = current_report.as_dict()["metrics"][1]["result"]
 
-                print('report result:', result)  
+            print('report result:', result)  
 
-                dataset_drift_detected = int(result["dataset_drift"])
-                rating_drift_detected = int(result["drift_by_columns"]["rating"]["drift_detected"])
+            dataset_drift_detected = int(result["dataset_drift"])
+            rating_drift_detected = int(result["drift_by_columns"]["rating"]["drift_detected"])
 
-                if dataset_drift_detected:
-                    evidently_dataset_drift_detected_status.set(1)
-                else:
-                    evidently_dataset_drift_detected_status.set(0)
+            if dataset_drift_detected:
+                evidently_dataset_drift_detected_status.set(1)
+            else:
+                evidently_dataset_drift_detected_status.set(0)
 
-                if rating_drift_detected:
-                    evidently_rating_drift_detected_status.set(1)
-                else:
-                    evidently_rating_drift_detected_status.set(0)
+            if rating_drift_detected:
+                evidently_rating_drift_detected_status.set(1)
+            else:
+                evidently_rating_drift_detected_status.set(0)
 
-                evidently_rating_drift_score.set(result["drift_by_columns"]["rating"]["drift_score"])
+            evidently_rating_drift_score.set(result["drift_by_columns"]["rating"]["drift_score"])
 
 
 

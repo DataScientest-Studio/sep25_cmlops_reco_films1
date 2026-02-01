@@ -11,3 +11,6 @@ csv:
 mlflow:
   tracking_uri: "http://mlflow:8080"
 
+airflow:
+  user: admin
+  password: FVprYTE2adMNEvXa
