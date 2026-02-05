@@ -1,8 +1,7 @@
 import time
 from fastapi import FastAPI, Response, Request
 from model.training import train_svd_model
-from model.predict import predict_rating
-from model.predict import recommend_movies
+from model.predict import predict_rating, recommend_movies, get_best_model, load_trainset
 from pydantic import BaseModel
 from typing import Optional 
 from typing import List 
@@ -19,6 +18,12 @@ from evidently.pipeline.column_mapping import ColumnMapping
 
 api = FastAPI()
 
+@api.on_event("startup")
+def on_startup():
+    # On pré-charge le meilleur modèle et le trainset en cache
+    get_best_model()
+    load_trainset()
+    
 #--------------------------------------------Metrique Prometheus ---------------------------------- 
 registry = CollectorRegistry()
 

@@ -3,21 +3,28 @@ import time
 import mlflow
 from mlflow import MlflowClient
 import yaml
+import functools
+
+# On va utiliser le cache pour stocker le modèle et le trainset afin d'éviter de les recharger à chaque prédiction
+@functools.lru_cache(maxsize=1)
+def get_best_model(): 
+    cfg_mlflow = yaml.safe_load(open("config.yaml"))['mlflow']
+    mlflow.set_tracking_uri(cfg_mlflow["tracking_uri"])
+    return mlflow.sklearn.load_model("models:/SVD_Model@best_model")
 
 
 def predict_rating(user_id, movie_id):
     # On prédit la note pour un utilisateur et un film donnés
     start_time = time.time()
     # On charge le meilleur modèle SVD sauvegardé depuis MLflow Model Registry
-    cfg_mlflow = yaml.safe_load(open("config.yaml"))['mlflow']
-    mlflow.set_tracking_uri(cfg_mlflow["tracking_uri"])
-    svd = mlflow.sklearn.load_model("models:/SVD_Model@best_model")
+    svd = get_best_model()
     load_time = time.time() - start_time
     start_time = time.time()
     predicted_rating = svd.predict(user_id, movie_id).est
     prediction_time = time.time() - start_time
     return predicted_rating, prediction_time, load_time
 
+@functools.lru_cache(maxsize=1)
 def load_trainset():
     trainset = None
     cfg_mlflow = yaml.safe_load(open("config.yaml"))['mlflow']
@@ -39,7 +46,7 @@ def recommend_movies(user_id, n_recommendations=10):
     # On recommande des films à un utilisateur donné qu'il n'a pas encore vus
 
     # On charge le meilleur modèle SVD sauvegardé depuis MLflow Model Registry
-    svd = mlflow.sklearn.load_model("models:/SVD_Model@best_model")
+    svd = get_best_model()
 
     # On charge le trainset sauvegardé lors de l'entrainement du modèle
     trainset = load_trainset() 
