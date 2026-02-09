@@ -95,10 +95,10 @@ L’objectif est de simuler l’arrivée progressive de nouvelles données de no
 🎯 Objectif
 Le DAG ingestion_ratings_dag implémente une ingestion incrémentale, c’est‑à‑dire :
 
-il détecte automatiquement les fichiers présents dans data/raw/ml-20m
+il détecte automatiquement les fichiers présents dans data/raw/ml-20m 
 il identifie uniquement ceux qui n’ont pas encore été chargés
-il appelle l’API FastAPI /load_ratings uniquement pour ces nouveaux fichiers
-il évite tout doublon dans MySQL
+il appelle l’API FastAPI /load_ratings uniquement pour ces  fichiers
+une fois le traitement terminé, il déplace le fichier dans un sous dossier /processed
 il déclenche l’entraînement (training_svd_dag) uniquement si de nouvelles données ont été ingérées
 📂 Où déposer les fichiers ?
 Les fichiers doivent être placés dans :
@@ -109,31 +109,28 @@ data/raw/ml-20m/
 Dossier :
 ratings-1.csv
 ratings-2.csv
-Airflow charge les 2 fichiers.
+Airflow charge les 2 fichiers et une fois le traitement terminé les place dans /processed
 
 2️⃣ Deuxième run
 Vous ajoutez :
 ratings-3.csv
 ratings-4.csv
-Dossier :
-ratings-1.csv
-ratings-2.csv
-ratings-3.csv
-ratings-4.csv
 
 Airflow détecte :
 Nouveaux fichiers = ["ratings-3.csv", "ratings-4.csv"]
-Il ne recharge pas les fichiers 1 et 2.
-
-3️⃣ Troisième run
-Vous ajoutez :
-ratings-5.csv
-ratings-6.csv
-Airflow charge uniquement ces deux fichiers.
+Il les traite et les placera également dans le dossier /processed
 
 
 ### Airflow 
 user:admin
 le password est à récupérer au lancement des containers car il est généré automatiquement par le mode standalone de airflow 
 -> docker compose logs airflow | grep -i password 
+
+
+## 8/ Streamlit
+Dans un premier temps, il faudra créer un env. local: python3 -m venv .venv
+et l'activer: source .venv/bin/activate
+Ensuite on installe les dépendances: pip install -r requirements_local.txt
+
+Enfin on peut lancer le streamlit: streamlit run ./src/app/streamlit.py 
 

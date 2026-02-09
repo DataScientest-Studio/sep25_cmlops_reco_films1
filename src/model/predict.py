@@ -4,6 +4,7 @@ import mlflow
 from mlflow import MlflowClient
 import yaml
 import functools
+import pandas as pd
 
 # On va utiliser le cache pour stocker le modèle et le trainset afin d'éviter de les recharger à chaque prédiction
 @functools.lru_cache(maxsize=1)
@@ -65,8 +66,32 @@ def recommend_movies(user_id, n_recommendations=10):
 
     # On trie les prédictions par note décroissante
     predictions.sort(key=lambda x: x[1], reverse=True)
-    
-    return predictions[:n_recommendations]
+
+    # On prend plus de films que demandé pour pouvoir retourner que des films avec titre
+    buffer_size = n_recommendations * 3
+    candidates = predictions[:buffer_size]
+
+    # On recupere le nom des films à partir de leur id
+    cfg = yaml.safe_load(open("config.yaml"))['mysql']
+    candidate_ids = [m_id for m_id, _ in candidates]
+    movies_df = pd.read_sql(
+        f"SELECT movie_id, title, genres FROM Movies WHERE movie_id IN {tuple(candidate_ids)}",
+        con=f"mysql+pymysql://{cfg['user']}:{cfg['password']}@{cfg['host']}:{cfg.get('port', cfg['port'])}/{cfg['database']}"
+    )
+
+    title_map = dict(zip(movies_df['movie_id'], movies_df['title']))
+    genres_map = dict(zip(movies_df['movie_id'], movies_df['genres']))
+
+    # On ne garde que les films qui ont un titre, jusqu'à n_recommendations
+    results = []
+    for m_id, score in candidates:
+        if m_id in title_map:
+            results.append((m_id, title_map[m_id], genres_map[m_id], score))
+        if len(results) >= n_recommendations:
+            break
+
+    return results
+
 
 if __name__ == "__main__":
     user_id = 26
@@ -79,5 +104,5 @@ if __name__ == "__main__":
 
     recommendations = recommend_movies(user_id, n_recommendations=5)
     print(f"Top 5 movie recommendations for user {user_id}:")
-    for movie_id, score in recommendations:
-        print(f"Movie ID: {movie_id}, Predicted Rating: {score}")
+    for movie_id, title, genres, score in recommendations:
+        print(f"Movie ID: {movie_id}, Title: {title}, Genres: {genres}, Predicted Rating: {score}")

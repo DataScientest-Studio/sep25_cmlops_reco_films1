@@ -13,4 +13,8 @@ mlflow:
 
 airflow:
   user: admin
-  password: FVprYTE2adMNEvXa
+  password: tKSdxYEFHzzpy4cu
+
+omdb_api:
+  url: "http://omdbapi.com/"
+  key: "ae8ed722"
