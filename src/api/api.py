@@ -239,3 +239,17 @@ async def truncate_ratings():
         api_request_duration_seconds.labels(endpoint="/truncate_ratings", method="POST", status_code="500").observe(duration)
         return {"message": str(e)}
     
+#endpoint pour trigger des erreurs API pour tester les metriques Prometheus
+@api.get("/trigger_error")
+async def trigger_error():
+    try:
+        start_time = time.time()
+        raise ValueError("Error generated for testing Prometheus metrics")
+    except Exception as e:
+        end_time = time.time()
+        duration = end_time - start_time
+        # log Prometheus
+        api_requests_total.labels(endpoint="/trigger_error", method="GET", status_code="500").inc()
+        api_request_duration_seconds.labels(endpoint="/trigger_error", method="GET", status_code="500").observe(duration)
+        return {"message": str(e)}
+    
